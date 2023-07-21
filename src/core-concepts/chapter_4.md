@@ -1,31 +1,32 @@
 # Programs
 
-任何开发人员都可以编写程序并将其部署到 Solana 区块链。程序（在其他协议上称为智能合约）是链上活动的基础，为从 DeFi 和 NFT 到社交媒体和游戏的一切提供动力。
+任何开发者都可以编写和部署程序到Solana区块链。这些程序（在其他协议中被称为智能合约）是链上活动的基础，为DeFi和NFT等各种应用提供动力，包括社交媒体和游戏。
 
 ## 事实
 
 > 情况说明书
-> - 程序处理来自最终用户和其他程序的[指令]()
-> - 所有程序都是无状态的：它们交互的任何数据都存储在通过指令传入的单独[帐户](./chapter_3.md)中
-> - 程序本身存储在标记为 executable 的帐户中
+> - 程序处理来自最终用户和其他程序的[指令](./chapter_5.md)
+> - 所有程序都是无状态的：它们与之交互的任何数据都存储在通过指令传递的单独[账户](./chapter_3.md)中
+> - 程序本身存储在标记为 `executable` 的帐户中
 > - 所有程序均由 [BPF 加载器](https://docs.solana.com/developing/runtime-facilities/programs#bpf-loader)拥有并由 [Solana 运行时](https://docs.solana.com/developing/programming-model/runtime)执行
 > - 开发人员最常使用 Rust 或 C++ 编写程序，但也可以选择任何针对 [LLVM](https://llvm.org/) 的 [BPF](https://en.wikipedia.org/wiki/Berkeley_Packet_Filter) 后端的语言
-> - 所有程序都有一个进行指令处理的入口点（即 process_instruction ）；参数始终包括：
->  - program_id: pubkey
->  - accounts : array
->  - instruction_data: byte array
+> - 所有程序都有一个进行指令处理的入口点（即 `process_instruction` ）；参数始终包括：
+>  - `program_id: pubkey`
+>  - `accounts : array`
+>  - `instruction_data: byte array`
 
-## 深潜
+## 深入挖掘
 
-与大多数其他区块链不同，Solana 将代码与数据完全分离。程序与之交互的所有数据都存储在单独的帐户中，并通过指令作为引用传递。该模型允许单个通用程序跨多个帐户运行，而不需要额外的部署。这种模式的常见示例在 Native 和 SPL 程序中随处可见。
+与大多数其他区块链不同，Solana完全将代码与数据分离。程序交互的所有数据都存储在单独的账户中，并通过指令以引用的方式传递。这种模型允许一个通用程序在不需要额外部署的情况下操作各种账户。这种模式在原生和SPL程序中都有常见的例子。
 
-### 本机程序和 Solana 程序库 (SPL)
 
-Solana 配备了许多程序，作为链上交互的核心构建块。这些程序分为[本机程序](https://docs.solana.com/developing/runtime-facilities/programs#bpf-loader)和 [Solana 程序库 (SPL)](https://spl.solana.com/) 程序。
+### 本地程序和Solana程序库（SPL）
 
-本机程序提供操作验证器所需的基本功能。在这些程序中，最著名的是[系统程序](https://docs.solana.com/developing/runtime-facilities/programs#system-program)，它负责管理新帐户并在两方之间转移 SOL。
+Solana配备了一系列作为链上交互核心构建模块的程序。这些程序分为[原生程序](https://docs.solana.com/developing/runtime-facilities/programs#bpf-loader)和[Solana程序库（SPL）](https://spl.solana.com/)程序。
 
-SPL 计划支持许多链上活动，包括创建、交换和借出代币，以及生成权益池和维护链上名称服务。 [SPL 令牌程序](https://spl.solana.com/token)可以直接通过 CLI 调用，而其他程序（例如[关联令牌帐户程序](https://spl.solana.com/associated-token-account)）通常由自定义程序组成。
+本地程序提供了操作验证器所需的基本功能。其中，最著名的是[系统程序](https://docs.solana.com/developing/runtime-facilities/programs#system-program)，负责管理新账户并在两个方之间转移SOL。
+
+SPL程序支持一系列的链上活动，包括创建、交换和借贷代币，以及生成质押池和维护链上名称服务。[SPL代币程序](https://spl.solana.com/token)可以直接通过CLI调用，而其他程序（如[关联代币账户程序](https://spl.solana.com/associated-token-account)）通常与自定义程序一起使用。
 
 ### 编写程序
 
@@ -63,13 +64,13 @@ SPL 计划支持许多链上活动，包括创建、交换和借出代币，以�
 solana program deploy <PROGRAM_FILEPATH>
 ```
 
-当程序部署时，它会被编译为[ELF共享对象](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format)（包含BPF字节码）并上传到Solana集群。程序存在于帐户中（与 Solana 上的其他所有内容非常相似），只不过这些帐户被标记为 executable 并分配给 BPF 加载程序。该账户的地址称为 program_id ，用于在以后的所有交易中引用该程序。
+当程序部署时，它会被编译为[ELF共享对象](https://en.wikipedia.org/wiki/Executable_and_Linkable_Format)（包含BPF字节码）并上传到Solana集群。程序存在于帐户中（与 Solana 上的其他所有内容非常相似），只不过这些帐户被标记为 `executable` 并分配给 BPF 加载程序。该账户的地址称为 `program_id` ，用于在以后的所有交易中引用该程序。
 
-Solana 支持多种 BPF 加载器，最新的是[可升级 BPF 加载器](https://explorer.solana.com/address/BPFLoaderUpgradeab1e11111111111111111111111)。 BPF 加载程序负责管理程序的帐户并通过 program_id 将其提供给客户端。所有程序都有一个进行指令处理的入口点（即 process_instruction ），并且参数始终包括：
+Solana 支持多种 BPF 加载器，最新的是[可升级 BPF 加载器](https://explorer.solana.com/address/BPFLoaderUpgradeab1e11111111111111111111111)。 BPF 加载程序负责管理程序的帐户并通过 `program_id` 将其提供给客户端。所有程序都有一个进行指令处理的入口点（即 process_instruction ），并且参数始终包括：
 
-- program_id: pubkey
-- accounts : array
-- instruction_data: byte array
+- `program_id: pubkey`
+- `accounts : array`
+- `instruction_data: byte array`
 
 一旦调用，程序将由 Solana 运行时执行。
 
