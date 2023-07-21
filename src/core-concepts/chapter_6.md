@@ -31,3 +31,8 @@ PDA是在Solana上开发程序的基本构建模块。通过PDA，程序可以�
 当生成一个PDA时， `findProgramAddress` 将返回用于将地址从椭圆曲线上踢出的地址和bump。有了这个bump，程序可以为需要其PDA的任何指令签名。为了签名，程序应将指令、账户列表以及用于派生PDA的种子和bump传递给 `invoke_signed` 。除了为指令签名外，PDA还必须通过 `invoke_signed` 为自己的创建签名。
 
 在使用PDA进行构建时，将[碰撞种子存储](https://github.com/solana-labs/solana-program-library/blob/78e29e9238e555967b9125799d7d420d7d12b959/token-swap/program/src/state.rs#L100)在账户数据本身中是很常见的。这样可以让开发人员在不必将碰撞作为指令参数传递的情况下轻松验证PDA。
+
+## 其他资源
+
+- [Program Derived Addresses](https://docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses)
+- [Understanding Program Derived Addresses](https://www.brianfriel.xyz/understanding-program-derived-addresses/)
