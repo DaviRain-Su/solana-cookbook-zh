@@ -30,14 +30,232 @@ PDAs的独特之处在于，这些地址不与任何私钥相关联。这是因�
 
 代码如下所示：
 
+```rust
+// anchor
+#[derive(Accounts)]
+#[instruction(blog_account_bump: u8)]
+pub struct InitializeBlog<'info> {
+    #[account(
+        init,
+        seeds = [
+            b"blog".as_ref(),
+            authority.key().as_ref()
+        ],
+        bump = blog_account_bump,
+        payer = authority,
+        space = Blog::LEN
+    )]
+    pub blog_account: Account<'info, Blog>,
+
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    pub system_program: Program<'info, System>
+}
+
+#[derive(Accounts)]
+#[instruction(post_account_bump: u8, post: Post)]
+pub struct CreatePost<'info> {
+    #[account(mut, has_one = authority)]
+    pub blog_account: Account<'info, Blog>,
+
+    #[account(
+        init,
+        seeds = [
+            b"post".as_ref(),
+            blog_account.key().as_ref(),
+            post.slug.as_ref(),
+        ],
+        bump = post_account_bump,
+        payer = authority,
+        space = Post::LEN
+    )]
+    pub post_account: Account<'info, Post>,
+
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    pub system_program: Program<'info, System>
+}
 ```
-todo!
+
+```rust
+fn process_create_post(
+    accounts: &[AccountInfo],
+    slug: String,
+    title: String,
+    content: String,
+    program_id: &Pubkey
+) -> ProgramResult {
+    if slug.len() > 10 || content.len() > 20 || title.len() > 50 {
+        return Err(BlogError::InvalidPostData.into())
+    }
+
+    let account_info_iter = &mut accounts.iter();
+
+    let authority_account = next_account_info(account_info_iter)?;
+    let blog_account = next_account_info(account_info_iter)?;
+    let post_account = next_account_info(account_info_iter)?;
+    let system_program = next_account_info(account_info_iter)?;
+
+    if !authority_account.is_signer {
+        return Err(ProgramError::MissingRequiredSignature);
+    }
+
+    let (blog_pda, _blog_bump) = Pubkey::find_program_address(
+        &[b"blog".as_ref(), authority_account.key.as_ref()],
+        program_id
+    );
+    if blog_pda != *blog_account.key || !blog_account.is_writable || blog_account.data_is_empty() {
+        return Err(BlogError::InvalidBlogAccount.into())
+    }
+
+    let (post_pda, post_bump) = Pubkey::find_program_address(
+        &[b"post".as_ref(), slug.as_ref(), authority_account.key.as_ref()],
+        program_id
+    );
+    if post_pda != *post_account.key {
+        return Err(BlogError::InvalidPostAccount.into())
+    }
+
+    let post_len: usize = 32 + 32 + 1 + (4 + slug.len()) + (4 + title.len()) + (4 + content.len());
+
+    let rent = Rent::get()?;
+    let rent_lamports = rent.minimum_balance(post_len);
+
+    let create_post_pda_ix = &system_instruction::create_account(
+        authority_account.key,
+        post_account.key,
+        rent_lamports,
+        post_len.try_into().unwrap(),
+        program_id
+    );
+    msg!("Creating post account!");
+    invoke_signed(
+        create_post_pda_ix,
+        &[
+            authority_account.clone(),
+            post_account.clone(),
+            system_program.clone()
+        ],
+        &[&[
+            b"post".as_ref(),
+            slug.as_ref(),
+            authority_account.key.as_ref(),
+            &[post_bump]
+        ]]
+    )?;
+
+    let mut post_account_state = try_from_slice_unchecked::<Post>(&post_account.data.borrow()).unwrap();
+    post_account_state.author = *authority_account.key;
+    post_account_state.blog = *blog_account.key;
+    post_account_state.bump = post_bump;
+    post_account_state.slug = slug;
+    post_account_state.title = title;
+    post_account_state.content = content;
+
+    msg!("Serializing Post data");
+    post_account_state.serialize(&mut &mut post_account.data.borrow_mut()[..])?;
+
+
+    let mut blog_account_state = Blog::try_from_slice(&blog_account.data.borrow())?;
+    blog_account_state.post_count += 1;
+
+    msg!("Serializing Blog data");
+    blog_account_state.serialize(&mut &mut blog_account.data.borrow_mut()[..])?;
+
+    Ok(())
+}
+
+fn process_init_blog(
+    accounts: &[AccountInfo],
+    program_id: &Pubkey
+) -> ProgramResult {
+    let account_info_iter = &mut accounts.iter();
+
+    let authority_account = next_account_info(account_info_iter)?;
+    let blog_account = next_account_info(account_info_iter)?;
+    let system_program = next_account_info(account_info_iter)?;
+
+    if !authority_account.is_signer {
+        return Err(ProgramError::MissingRequiredSignature);
+    }
+
+    let (blog_pda, blog_bump) = Pubkey::find_program_address(
+        &[b"blog".as_ref(), authority_account.key.as_ref()],
+        program_id
+    );
+    if blog_pda != *blog_account.key {
+        return Err(BlogError::InvalidBlogAccount.into())
+    }
+
+    let rent = Rent::get()?;
+    let rent_lamports = rent.minimum_balance(Blog::LEN);
+
+    let create_blog_pda_ix = &system_instruction::create_account(
+        authority_account.key,
+        blog_account.key,
+        rent_lamports,
+        Blog::LEN.try_into().unwrap(),
+        program_id
+    );
+    msg!("Creating blog account!");
+    invoke_signed(
+        create_blog_pda_ix,
+        &[
+            authority_account.clone(),
+            blog_account.clone(),
+            system_program.clone()
+        ],
+        &[&[
+            b"blog".as_ref(),
+            authority_account.key.as_ref(),
+            &[blog_bump]
+        ]]
+    )?;
+
+    let mut blog_account_state = Blog::try_from_slice(&blog_account.data.borrow())?;
+    blog_account_state.authority = *authority_account.key;
+    blog_account_state.bump = blog_bump;
+    blog_account_state.post_count = 0;
+    blog_account_state.serialize(&mut &mut blog_account.data.borrow_mut()[..])?;
+
+
+    Ok(())
+}
+
 ```
+
 在客户端，你可以使用`PublicKey.findProgramAddress()`来获取所需的`Blog` 和`Post`账户地址，然后将其传递给`connection.getAccountInfo()`来获取账户数据。下面是一个示例：
 
 
-```
-todo!
+```ts
+async () => {
+  const connection = new Connection("http://localhost:8899", "confirmed");
+
+  const [blogAccount] = await PublicKey.findProgramAddress(
+    [Buffer.from("blog"), user.publicKey.toBuffer()],
+    MY_PROGRAM_ID
+  );
+
+  const [postAccount] = await PublicKey.findProgramAddress(
+    [Buffer.from("post"), Buffer.from("slug-1"), user.publicKey.toBuffer()],
+    MY_PROGRAM_ID
+  );
+
+  const blogAccountInfo = await connection.getAccountInfo(blogAccount);
+  const blogAccountState = BLOG_ACCOUNT_DATA_LAYOUT.decode(
+    blogAccountInfo.data
+  );
+  console.log("Blog account state: ", blogAccountState);
+
+  const postAccountInfo = await connection.getAccountInfo(postAccount);
+  const postAccountState = POST_ACCOUNT_DATA_LAYOUT.decode(
+    postAccountInfo.data
+  );
+  console.log("Post account state: ", postAccountState);
+};
+
 ```
 
 ## 单个映射账户
@@ -53,15 +271,173 @@ todo!
 因此，在考虑你的用例后，可以按照以下方式实现这种方法：
 
 
-```
-todo!
+```rust
+fn process_init_map(accounts: &[AccountInfo], program_id: &Pubkey) -> ProgramResult {
+    let account_info_iter = &mut accounts.iter();
+
+    let authority_account = next_account_info(account_info_iter)?;
+    let map_account = next_account_info(account_info_iter)?;
+    let system_program = next_account_info(account_info_iter)?;
+
+    if !authority_account.is_signer {
+        return Err(ProgramError::MissingRequiredSignature)
+    }
+
+    let (map_pda, map_bump) = Pubkey::find_program_address(
+        &[b"map".as_ref()],
+        program_id
+    );
+
+    if map_pda != *map_account.key || !map_account.is_writable || !map_account.data_is_empty() {
+        return Err(BlogError::InvalidMapAccount.into())
+    }
+
+    let rent = Rent::get()?;
+    let rent_lamports = rent.minimum_balance(MapAccount::LEN);
+
+    let create_map_ix = &system_instruction::create_account(
+        authority_account.key,
+        map_account.key,
+        rent_lamports,
+        MapAccount::LEN.try_into().unwrap(),
+        program_id
+    );
+
+    msg!("Creating MapAccount account");
+    invoke_signed(
+        create_map_ix,
+        &[
+            authority_account.clone(),
+            map_account.clone(),
+            system_program.clone()
+        ],
+        &[&[
+            b"map".as_ref(),
+            &[map_bump]
+        ]]
+    )?;
+
+    msg!("Deserializing MapAccount account");
+    let mut map_state = try_from_slice_unchecked::<MapAccount>(&map_account.data.borrow()).unwrap();
+    let empty_map: BTreeMap<Pubkey, Pubkey> = BTreeMap::new();
+
+    map_state.is_initialized = 1;
+    map_state.map = empty_map;
+
+    msg!("Serializing MapAccount account");
+    map_state.serialize(&mut &mut map_account.data.borrow_mut()[..])?;
+
+    Ok(())
+}
+
+fn process_insert_entry(accounts: &[AccountInfo], program_id: &Pubkey) -> ProgramResult {
+
+    let account_info_iter = &mut accounts.iter();
+
+    let a_account = next_account_info(account_info_iter)?;
+    let b_account = next_account_info(account_info_iter)?;
+    let map_account = next_account_info(account_info_iter)?;
+
+    if !a_account.is_signer {
+        return Err(ProgramError::MissingRequiredSignature)
+    }
+
+    if map_account.data.borrow()[0] == 0 || *map_account.owner != *program_id {
+        return Err(BlogError::InvalidMapAccount.into())
+    }
+
+    msg!("Deserializing MapAccount account");
+    let mut map_state = try_from_slice_unchecked::<MapAccount>(&map_account.data.borrow())?;
+
+    if map_state.map.contains_key(a_account.key) {
+        return Err(BlogError::AccountAlreadyHasEntry.into())
+    }
+
+    map_state.map.insert(*a_account.key, *b_account.key);
+
+    msg!("Serializing MapAccount account");
+    map_state.serialize(&mut &mut map_account.data.borrow_mut()[..])?;
+
+    Ok(())
+}
+
 ```
 
 上述程序的客户端测试代码可能如下所示：
 
 
-```
-todo!
+```ts
+const insertABIx = new TransactionInstruction({
+  programId: MY_PROGRAM_ID,
+  keys: [
+    {
+      pubkey: userA.publicKey,
+      isSigner: true,
+      isWritable: true,
+    },
+    {
+      pubkey: userB.publicKey,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: mapKey,
+      isSigner: false,
+      isWritable: true,
+    },
+  ],
+  data: Buffer.from(Uint8Array.of(1)),
+});
+
+const insertBCIx = new TransactionInstruction({
+  programId: MY_PROGRAM_ID,
+  keys: [
+    {
+      pubkey: userB.publicKey,
+      isSigner: true,
+      isWritable: true,
+    },
+    {
+      pubkey: userC.publicKey,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: mapKey,
+      isSigner: false,
+      isWritable: true,
+    },
+  ],
+  data: Buffer.from(Uint8Array.of(1)),
+});
+
+const insertCAIx = new TransactionInstruction({
+  programId: MY_PROGRAM_ID,
+  keys: [
+    {
+      pubkey: userC.publicKey,
+      isSigner: true,
+      isWritable: true,
+    },
+    {
+      pubkey: userA.publicKey,
+      isSigner: false,
+      isWritable: false,
+    },
+    {
+      pubkey: mapKey,
+      isSigner: false,
+      isWritable: true,
+    },
+  ],
+  data: Buffer.from(Uint8Array.of(1)),
+});
+
+const tx = new Transaction();
+tx.add(initMapIx);
+tx.add(insertABIx);
+tx.add(insertBCIx);
+tx.add(insertCAIx);
 ```
 
 

@@ -73,12 +73,6 @@ metadata_url = API_URL+"/"+meta_transaction.id
 
 ```
 
-s
-```bash
-// cli
-
-```
-
 ### 铸造（Mint）该 NFT
 
 如果你已经上传了图像和元数据，您可以使用以下代码铸造（Mint）该 NFT。
@@ -93,7 +87,7 @@ const mintNFTResponse = await metaplex.nfts().create({
 
 ```
 > **tip 注意**
-
+>
 > 你不能使用与你钱包不同的创作者信息来铸造（Mint） NFT。如果遇到创作者的问题，请确保你的元数据中将你列为创作者。
 
 
@@ -305,12 +299,6 @@ candyMachines.map((candyMachine, index) => {
 });
 
 ```
-
-```python
-// python
-
-```
-
 
 ### 如何通过Candy Machine的地址查找它
 

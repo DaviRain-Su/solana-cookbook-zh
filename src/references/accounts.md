@@ -179,11 +179,6 @@ let tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
 
 ```
 
-```bash
-// cli
-
-```
-
 ### 转账
 
 ```typescript

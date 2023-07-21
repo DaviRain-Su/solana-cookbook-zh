@@ -4,16 +4,14 @@ A Cross-Program Invocation (CPI) is a direct call from one program into another,
 
 The purpose of this section is to provide a high-level overview CPIs. Please refer to the linked resources below for more detailed explanations, examples, and walkthroughs.
 
-## Facts
 
-::: tip Fact Sheet
-- A Cross-Program Invocation (CPI) is a call from one program to another, targeting a specific instruction on the program being called
-- CPIs allow the calling program to extend its signer privileges to the callee program
-- Programs can execute CPIs using either `invoke` or `invoke_signed` within their instructions
-- `invoke` is used when all required signatures are accessible prior to invocation, without the need for PDAs to act as signers
-- `invoke_signed` is used when PDAs from the calling program are required as signers in the CPI
-- After a CPI is made to another program, the callee program can make further CPIs to other programs, up to a maximum depth of 4
-:::
+> **tip Fact Sheet**
+> - A Cross-Program Invocation (CPI) is a call from one program to another, targeting a specific instruction on the program being called
+> - CPIs allow the calling program to extend its signer privileges to the callee program
+> - Programs can execute CPIs using either `invoke` or `invoke_signed` within their instructions
+> - `invoke` is used when all required signatures are accessible prior to invocation, without the need for PDAs to act as signers
+> - `invoke_signed` is used when PDAs from the calling program are required as signers in the CPI
+> - After a CPI is made to another program, the callee program can make further CPIs to other programs, up to a maximum depth of 4
 
 ## Deep Dive
 

@@ -2,15 +2,13 @@
 
 在某些情况下，一个看似有效的交易可能在输入区块之前会被丢弃。这种情况最常发生在网络拥堵期间，当一个RPC节点无法将交易重新广播给区块链的[领导](https://docs.solana.com/terminology#leader)节点时。对于最终用户来说，他们的交易可能会完全消失。虽然RPC节点配备了通用的重新广播算法，但应用程序开发人员也可以开发自己的自定义重新广播逻辑。
 
-## 综述
-
-::: tip 事实表
-- RPC节点将尝试使用通用算法重新广播交易
-- 应用程序开发人员可以实现自定义的重新广播逻辑
-- 开发人员应该利用`sendTransaction` JSON-RPC方法中的`maxRetries`参数
-- 开发人员应该启用预检查，以便在提交交易之前引发错误
-- 在重新签署任何交易之前，**非常重要**的是确保初始交易的块哈希已过期
-:::
+> **tip 事实表**
+>
+> - RPC节点将尝试使用通用算法重新广播交易
+> - 应用程序开发人员可以实现自定义的重新广播逻辑
+> - 开发人员应该利用`sendTransaction` JSON-RPC方法中的`maxRetries`参数
+> - 开发人员应该启用预检查，以便在提交交易之前引发错误
+> - 在重新签署任何交易之前，**非常重要**的是确保初始交易的块哈希已过期
 
 ## 交易的旅程
 
@@ -77,18 +75,19 @@
 
 在提交交易方面，`sendTransaction` RPC方法是开发者可用的主要工具。`sendTransaction`仅负责将交易从客户端传递到RPC节点。如果节点接收到交易，`sendTransaction`将返回用于跟踪交易的交易ID。成功的响应并不表示该交易将由集群处理或最终确定。
 
-:::tip
-#### 请求参数
-- `transaction`: `string` -  完全签名的交易，以编码字符串形式表示
-- (可选) `configuration object`: `object`
-    - `skipPreflight`: `boolean` - 如果为 true，则跳过预检事务检查（默认为 false）
-    - (可选) `preflightCommitment`: `string` - 用于针对银行插槽进行预检模拟的[承诺](https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment) 级别（默认为"finalized"）
-    - (可选) `encoding`: `string` - 用于交易数据的编码方式。可以选择 "base58"（较慢）或 "base64"（默认为 "base58")
-    - (可选) `maxRetries`: `usize` -  RPC节点重试将交易发送给领导者的最大次数。如果未提供此参数，RPC节点将重试交易，直到交易最终确定或块哈希过期为止
 
-#### 响应
-- `transaction id`: `string` - 第一个嵌入在交易中的交易签名，以base-58编码的字符串形式表示。可以使用该交易ID与 [getSignatureStatuses](https://docs.solana.com/developing/clients/jsonrpc-api#getsignaturestatuses) 一起使用，以轮询获取状态更新。
-:::
+> **Tips**
+> #### 请求参数
+> - `transaction`: `string` -  完全签名的交易，以编码字符串形式表示
+> - (可选) `configuration object`: `object`
+>     - `skipPreflight`: `boolean` - 如果为 true，则跳过预检事务检查（默认为 false）
+>     - (可选) `preflightCommitment`: `string` - 用于针对银行插槽进行预检模拟的[承诺](https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment) 级别（默认为"finalized"）
+>     - (可选) `encoding`: `string` - 用于交易数据的编码方式。可以选择 "base58"（较慢）或 "base64"（默认为 "base58")
+>     - (可选) `maxRetries`: `usize` -  RPC节点重试将交易发送给领导者的最大次数。如果未提供此参数，RPC节点将重试交易，直到交易最终确定或块哈希过期为止
+>
+> #### 响应
+> - `transaction id`: `string` - 第一个嵌入在交易中的交易签名，以base-58编码的字符串形式表示。可以使用该交易ID与 [getSignatureStatuses](https://docs.solana.com/developing/clients/jsonrpc-api#getsignaturestatuses) 一起使用，以轮询获取状态更新。
+
 
 ## 自定义重播逻辑
 
@@ -97,8 +96,15 @@
 手动重试交易的常见模式涉及临时存储来自[getLatestBlockhash](https://docs.solana.com/developing/clients/jsonrpc-api#getlatestblockhash) 的`lastValidBlockHeight`。一旦存储了该值，应用程序可以[轮询集群的blockheight](https://docs.solana.com/developing/clients/jsonrpc-api#getblockheight)， 并在适当的时间间隔内手动重试交易。在网络拥堵的时期，将`maxRetries`设置为0并通过自定义算法手动重新广播是有优势的。一些应用程序可能采用[指数退避](https://en.wikipedia.org/wiki/Exponential_backoff)， 而其他应用程序（如[Mango](https://www.mango.markets/) ）选择在恒定间隔内[持续重新提交](https://github.com/blockworks-foundation/mango-ui/blob/b6abfc6c13b71fc17ebbe766f50b8215fa1ec54f/src/utils/send.tsx#L713) 交易，直到发生超时。
 
 
-```
-todo!
+```ts
+while (blockheight < lastValidBlockHeight) {
+  connection.sendRawTransaction(rawTransaction, {
+    skipPreflight: true,
+  });
+  await sleep(500);
+  blockheight = await connection.getBlockHeight();
+}
+
 ```
 
 

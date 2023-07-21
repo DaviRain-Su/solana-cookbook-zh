@@ -4,16 +4,16 @@
 PDA是[Cross-Program Invocation（跨程序调用）](https://docs.solana.com/developing/programming-model/calling-between-programs#cross-program-invocations)的基础，
 这个功能让Solana的app可以跟其他app进行组合。
 
-## 综述
 
-::: tip 要点
-- PDA是长度为32的字节串，看起来和公钥很像，但是并没有与之对应的私钥
-- `findProgramAddress`可以针对一个programId（程序id）和seeds（种子）唯一确定的生成一个PDA。这里的seeds（种子）是一组指定的字节串
-- 一个跳跃（一个字节）用于将候选PDA推离ed25519椭圆曲线
-- 程序通过传入种子和跳跃参数，调用[invoke_signed](https://docs.solana.com/developing/programming-model/calling-between-programs#program-signed-accounts)为PDA进行签名
-- PDA只能被用来派生出这个地址的程序所签名
-- 除了允许程序为不同的instruction签名之外，PDA还提供了一个像哈希表一样的接口，用于[建立账户索引](../guides/account-maps.md)
-:::
+> **tip 要点**
+>
+> - PDA是长度为32的字节串，看起来和公钥很像，但是并没有与之对应的私钥
+> - `findProgramAddress`可以针对一个programId（程序id）和seeds（种子）唯一确定的生成一个PDA。这里的seeds（种子）是一组指定的字节串
+> - 一个跳跃（一个字节）用于将候选PDA推离ed25519椭圆曲线
+> - 程序通过传入种子和跳跃参数，调用[invoke_signed](https://docs.solana.com/developing/programming-model/calling-between-programs#program-signed-accounts)为PDA进行签名
+> - PDA只能被用来派生出这个地址的程序所签名
+> - 除了允许程序为不同的instruction签名之外，PDA还提供了一个像哈希表一样的接口，用于[建立账户索引](../guides/account-maps.md)
+
 
 # 深入
 

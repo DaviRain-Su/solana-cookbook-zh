@@ -6,16 +6,14 @@ Solana最近发布了版本化交易。提议的更改如下：
 
 2. 添加一种新的交易格式，可以利用链上地址查找表。
 
-## 综述
 
-::: tip 事实表
--传统交易存在一个主要问题：最大允许的大小为1232字节，因此原子交易中可以容纳的账户数量为35个地址。
-- 地址查找表（LUTs）：一旦账户存储在该表中，可以使用1字节的u8索引，在交易消息中引用该表的地址。
-- 可以使用`solana/web3.js`的`createLookupTable()`构建一个新的查找表，并确定其地址。
-- 一旦创建了LUT，可以进行扩展，即可以将账户追加到表中。
-- 版本化交易：需要修改传统交易的结构以整合LUTs。
-- 在引入版本化之前，交易在其头部的第一个字节中保留了一个未使用的最高位，可以用来显式声明交易的版本。
-:::
+> **tip 事实表**
+> -传统交易存在一个主要问题：最大允许的大小为1232字节，因此原子交易中可以容纳的账户数量为35个地址。
+> - 地址查找表（LUTs）：一旦账户存储在该表中，可以使用1字节的u8索引，在交易消息中引用该表的地址。
+> - 可以使用`solana/web3.js`的`createLookupTable()`构建一个新的查找表，并确定其地址。
+> - 一旦创建了LUT，可以进行扩展，即可以将账户追加到表中。
+> - 版本化交易：需要修改传统交易的结构以整合LUTs。
+> - 在引入版本化之前，交易在其头部的第一个字节中保留了一个未使用的最高位，可以用来显式声明交易的版本。
 
 我们将更详细地讨论上述引入的更改以及它们对开发人员的意义。然而，为了更好地理解这些更改，我们首先需要了解常规（或传统）交易的结构。
 
@@ -30,15 +28,15 @@ Solana网络使用最大事务单元（MTU）大小为1280字节，遵循[IPv6 M
 
 ![Transaction Format](./versioned-transactions/tx_format.png)
 
-::: tip Compact-Array format
-
-A compact array is an array serialised to have the following components:
-
-1. An array length in a multi-byte encoding called [Compact-u16](https://beta.docs.solana.com/developing/programming-model/transactions#compact-u16-format)
-2. Followed by each array item
-
-![Compact array format](./versioned-transactions/compact_array_format.png)
-:::
+> **tip Compact-Array format**
+>
+>
+> A compact array is an array serialised to have the following components:
+>
+> 1. An array length in a multi-byte encoding called [Compact-u16](https://beta.docs.solana.com/developing/programming-model/transactions#compact-u16-format)
+> 2. Followed by each array item
+>
+> ![Compact array format](./versioned-transactions/compact_array_format.png)
 
 ## 传统消息
 
@@ -93,7 +91,7 @@ A compact array is an array serialised to have the following components:
 
 这是一个问题，因为有几种情况下，开发人员需要在单个交易中包含数百个无需签名的账户。但是，传统交易模型目前无法实现这一点。目前使用的解决方案是在链上临时存储状态，并在稍后的交易中使用。但是，当多个程序需要组合在单个交易中时，这种解决方法就不适用了。每个程序都需要多个账户作为输入，因此我们陷入了与之前相同的问题。
 
-这就是引入**地址查找表（Address Lookup Tables，LUT）**的原因。
+这就是引入 **地址查找表（Address Lookup Tables，LUT）**的原因。
 
 ## 地址查找表(Address Lookeup Tables)
 

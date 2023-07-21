@@ -59,25 +59,6 @@ let mintAccount = await getMint(connection, mintAccountPublicKey);
 
 ```
 
-```python
-// python
-
-```
-
-```cpp
-// cpp
-
-```
-
-```rust
-// rust
-
-```
-
-```bash
-// cli
-
-```
 ## 如何创建一个代币账户
 
 用户需要一个代币账户来持有代币。
